@@ -1,0 +1,9 @@
+provider:
+  name: faas
+  gateway: http://localhost:8080
+
+functions:
+  openfaas-graphql-blog:
+    lang: node
+    handler: ./openfaas-graphql-blog
+    image: kenfdev/openfaas-graphql-blog

@@ -1,0 +1,95 @@
+version: "3.2"
+services:
+    gateway:
+        volumes:
+            - "/var/run/docker.sock:/var/run/docker.sock"
+        ports:
+            - 8080:8080
+        image: functions/gateway:0.6.6-beta
+        networks:
+            - functions
+        environment:
+            dnsrr: "true"  # Temporarily use dnsrr in place of VIP while issue persists on PWD
+        deploy:
+            placement:
+                constraints:
+                    - 'node.role == manager'
+                    - 'node.platform.os == linux'
+    prometheus:
+        image: functions/prometheus:latest  # autobuild from Dockerfile in repo.
+        command: "-config.file=/etc/prometheus/prometheus.yml -storage.local.path=/prometheus -storage.local.memory-chunks=10000 --alertmanager.url=http://alertmanager:9093"
+        ports:
+            - 9090:9090
+        depends_on:
+            - gateway
+            - alertmanager
+        environment:
+            no_proxy: "gateway"
+        networks:
+            - functions
+        deploy:
+            placement:
+                constraints:
+                    - 'node.role == manager'
+                    - 'node.platform.os == linux'
+
+    alertmanager:
+        image: functions/alertmanager:latest    # autobuild from Dockerfile in repo.
+        environment:
+            no_proxy: "gateway"
+#        volumes:
+#            - ./prometheus/alertmanager.yml:/alertmanager.yml
+        command:
+            - '-config.file=/alertmanager.yml'
+        networks:
+            - functions
+        ports:
+            - 9093:9093
+        deploy:
+            placement:
+                constraints:
+                    - 'node.role == manager'
+                    - 'node.platform.os == linux'
+
+    db:
+        image: arangodb/arangodb:3.2.3
+        networks:
+            - functions
+        ports:
+            - 8529:8529
+        environment:
+            no_proxy: "gateway"
+            https_proxy: $https_proxy
+            ARANGO_ROOT_PASSWORD: openfaasgraphqlblog
+        deploy:
+            placement:
+                constraints:
+                    - 'node.platform.os == linux'
+
+    # Service label of "function" allows functions to show up in UI on http://gateway:8080/
+    graphqlblog:
+        image: kenfdev/openfaas-graphql-blog
+        labels:
+            function: "true"
+        depends_on:
+            - gateway
+        networks:
+            - functions
+        environment:
+            no_proxy: "gateway"
+            https_proxy: $https_proxy
+            ARANGODB_HOST: "db"
+            ARANGODB_PORT: "8529"
+            ARANGODB_DB: "${ARANGODB_DB}"
+            ARANGODB_USERNAME: "${ARANGODB_USERNAME}"
+            ARANGODB_PASSWORD: "${ARANGODB_PASSWORD}"
+        deploy:
+            placement:
+                constraints:
+                    - 'node.platform.os == linux'
+
+networks:
+    functions:
+        driver: overlay
+        # Docker does not support this option yet - maybe create outside of the stack and reference as "external"?
+        #attachable: true

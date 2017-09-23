@@ -1,0 +1,19 @@
+{
+  "name": "function",
+  "version": "1.0.0",
+  "description": "",
+  "main": "handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "arangojs": "^5.7.0",
+    "bluebird": "^3.5.0",
+    "graphql": "^0.11.3",
+    "graphql-custom-types": "^1.1.0",
+    "graphql-tools": "^1.2.2"
+  }
+}
